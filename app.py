@@ -12,30 +12,17 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     st.success("✅ File uploaded and parsed successfully!")
 
-    # Data Cleaning & Segregation
-    st.info("🔍 Parsing complex reaction details into structured fields...")
-
-    def parse_reaction_details(text):
-        try:
-            parts = text.split(" (")
-            reaction = parts[0].strip()
-            details = parts[1].strip(")")
-            segments = [seg.strip() for seg in details.split("–")]
-            if len(segments) == 3:
-                duration, outcome, seriousness = segments
-                return pd.Series([reaction, duration, outcome, seriousness])
-        except:
-            return pd.Series([None, None, None, None])
-        return pd.Series([None, None, None, None])
-
-    df[['Reaction', 'Duration', 'Outcome', 'Seriousness Criteria']] = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].apply(parse_reaction_details)
-
-    # Drug Extraction
-    df['Drug'] = df['Suspect/interacting Drug List (Drug Char - Indication PT - Action taken - [Duration - Dose - Route])'].str.extract(r'\[(.*?)\]')
+    # Extract columns from "Reaction List PT (Duration – Outcome - Seriousness Criteria)"
+    st.info("📌 Parsing reaction field into structured columns...")
+    reaction_data = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].str.extract(
+        r'(?P<Reaction PT>.*?) \((?P<Duration>.*?) – (?P<Outcome>.*?) – (?P<Seriousness Criteria>.*?)\)'
+    )
+    df = pd.concat([df, reaction_data], axis=1)
 
     # Data Preview
-    with st.expander("🔍 Preview Raw Data"):
-        st.dataframe(df[['Drug', 'Reaction', 'Duration', 'Outcome', 'Seriousness Criteria']].head(10))
+    with st.expander("🔍 Preview Parsed Data"):
+        st.dataframe(df[['Reaction List PT (Duration – Outcome - Seriousness Criteria)', 
+                         'Reaction PT', 'Duration', 'Outcome', 'Seriousness Criteria']].head(10))
 
     # Demographic Summary
     st.subheader("👥 Demographic Summary")
@@ -49,10 +36,12 @@ if uploaded_file:
 
     # Signal Detection
     st.subheader("⚠️ Top Drug-Reaction Signals")
+    df['Drug'] = df['Suspect/interacting Drug List (Drug Char - Indication PT - Action taken - [Duration - Dose - Route])'].str.extract(r'\[(.*?)\]')
+    df['Reaction'] = df['Reaction PT']
     signals = df.groupby(['Drug', 'Reaction']).size().reset_index(name="Count").sort_values("Count", ascending=False).head(10)
     st.dataframe(signals)
 
-    # Timeline Trend
+    # Timeline
     st.subheader("📈 Monthly ADR Reporting Trend")
     df['EV Gateway Receipt Date'] = pd.to_datetime(df['EV Gateway Receipt Date'], errors='coerce')
     timeline = df.groupby(df['EV Gateway Receipt Date'].dt.to_period('M')).size().reset_index(name="Reports")
@@ -82,7 +71,6 @@ if uploaded_file:
     most_drug = df['Drug'].mode()[0] if not df['Drug'].mode().empty else "N/A"
     most_reaction = df['Reaction'].mode()[0] if not df['Reaction'].mode().empty else "N/A"
     top_demo = demo.sort_values("Count", ascending=False).iloc[0]
-
     top_outcome = outcome_counts.iloc[0]["Outcome"] if not outcome_counts.empty else "N/A"
     top_seriousness = seriousness_counts.iloc[0]["Seriousness"] if not seriousness_counts.empty else "N/A"
 
