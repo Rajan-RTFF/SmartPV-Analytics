@@ -12,17 +12,14 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     st.success("✅ File uploaded and parsed successfully!")
 
-    # Extract columns from "Reaction List PT (Duration – Outcome - Seriousness Criteria)"
-    st.info("📌 Parsing reaction field into structured columns...")
-    reaction_data = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].str.extract(
-        r'(?P<Reaction PT>.*?) \((?P<Duration>.*?) – (?P<Outcome>.*?) – (?P<Seriousness Criteria>.*?)\)'
-    )
-    df = pd.concat([df, reaction_data], axis=1)
+    # Extract structured columns from Reaction List PT compound field
+    df[['Reaction List PT', 'Duration', 'Outcome', 'Seriousness Criteria']] = df[
+        'Reaction List PT (Duration – Outcome - Seriousness Criteria)'
+    ].str.extract(r'^(.*?) \((.*?) – (.*?) - (.*?)\)$')
 
     # Data Preview
-    with st.expander("🔍 Preview Parsed Data"):
-        st.dataframe(df[['Reaction List PT (Duration – Outcome - Seriousness Criteria)', 
-                         'Reaction PT', 'Duration', 'Outcome', 'Seriousness Criteria']].head(10))
+    with st.expander("🔍 Preview Raw Data"):
+        st.dataframe(df.head(10))
 
     # Demographic Summary
     st.subheader("👥 Demographic Summary")
@@ -37,11 +34,11 @@ if uploaded_file:
     # Signal Detection
     st.subheader("⚠️ Top Drug-Reaction Signals")
     df['Drug'] = df['Suspect/interacting Drug List (Drug Char - Indication PT - Action taken - [Duration - Dose - Route])'].str.extract(r'\[(.*?)\]')
-    df['Reaction'] = df['Reaction PT']
+    df['Reaction'] = df['Reaction List PT']
     signals = df.groupby(['Drug', 'Reaction']).size().reset_index(name="Count").sort_values("Count", ascending=False).head(10)
     st.dataframe(signals)
 
-    # Timeline
+    # Timeline Trend
     st.subheader("📈 Monthly ADR Reporting Trend")
     df['EV Gateway Receipt Date'] = pd.to_datetime(df['EV Gateway Receipt Date'], errors='coerce')
     timeline = df.groupby(df['EV Gateway Receipt Date'].dt.to_period('M')).size().reset_index(name="Reports")
@@ -55,6 +52,7 @@ if uploaded_file:
 
     # Outcome & Seriousness Summary
     st.subheader("🧠 Outcome & Seriousness Summary")
+
     outcome_counts = df['Outcome'].value_counts().reset_index()
     outcome_counts.columns = ["Outcome", "Count"]
     seriousness_counts = df['Seriousness Criteria'].value_counts().reset_index()
