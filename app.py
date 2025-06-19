@@ -46,17 +46,38 @@ if uploaded_file:
     plt.title("Monthly ADR Reports")
     st.pyplot(fig2)
 
+    # Outcome & Seriousness Summary
+    st.subheader("🧠 Outcome & Seriousness Summary")
+    outcome_series = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].dropna().str.extract(r'– (.*?) –')[0]
+    seriousness_series = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].dropna().str.extract(r'– .*? – (.*?)\)')[0]
+
+    outcome_counts = outcome_series.value_counts().reset_index()
+    outcome_counts.columns = ["Outcome", "Count"]
+    seriousness_counts = seriousness_series.value_counts().reset_index()
+    seriousness_counts.columns = ["Seriousness", "Count"]
+
+    st.markdown("**Most Common Outcomes**")
+    st.dataframe(outcome_counts)
+
+    st.markdown("**Most Common Seriousness Criteria**")
+    st.dataframe(seriousness_counts)
+
     # Summary
-    st.subheader("📝 Summary Insights")
+    st.header("📝 Summary Insights")
     most_drug = df['Drug'].mode()[0] if not df['Drug'].mode().empty else "N/A"
     most_reaction = df['Reaction'].mode()[0] if not df['Reaction'].mode().empty else "N/A"
     top_demo = demo.sort_values("Count", ascending=False).iloc[0]
 
+    top_outcome = outcome_counts.iloc[0]["Outcome"] if not outcome_counts.empty else "N/A"
+    top_seriousness = seriousness_counts.iloc[0]["Seriousness"] if not seriousness_counts.empty else "N/A"
+
     st.markdown(f"""
-    - **Total Reports**: {len(df)}
-    - **Most Frequent Drug**: `{most_drug}`
-    - **Most Frequent Reaction**: `{most_reaction}`
-    - **Top Patient Group**: `{top_demo['Patient Age Group']}` ({top_demo['Count']} reports)
+    - **Total Reports:** {len(df)}
+    - **Most Frequent Drug:** `{most_drug}`
+    - **Most Frequent Reaction:** `{most_reaction}`
+    - **Top Patient Group:** `{top_demo['Patient Age Group']}` ({top_demo['Count']} reports)
+    - **Most Common Outcome:** `{top_outcome}`
+    - **Most Common Seriousness Criteria:** `{top_seriousness}`
     """)
 
     # Export processed data
@@ -66,4 +87,6 @@ if uploaded_file:
         df.to_excel(writer, sheet_name='Raw Data', index=False)
         demo.to_excel(writer, sheet_name='Demographics', index=False)
         signals.to_excel(writer, sheet_name='Signals', index=False)
+        outcome_counts.to_excel(writer, sheet_name='Outcomes', index=False)
+        seriousness_counts.to_excel(writer, sheet_name='Seriousness', index=False)
     st.download_button("Download Excel Report", data=export_data.getvalue(), file_name="pv_analytics_report.xlsx")
