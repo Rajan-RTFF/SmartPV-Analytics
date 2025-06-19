@@ -81,7 +81,7 @@ if uploaded_file:
     """)
 
     # Disproportionality Analysis (Simplified PRR)
- st.header("📌 Disproportionality Analysis PRR Approximation")
+ st.header("📌 Disproportionality Analysis (PRR Approximation)")
      total_reports = len(df)
      drug_event_counts = df.groupby(['Drug', 'Reaction']).size().reset_index(name='Count')
      drug_counts = df['Drug'].value_counts().reset_index()
