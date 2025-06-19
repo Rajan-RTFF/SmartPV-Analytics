@@ -12,11 +12,6 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     st.success("✅ File uploaded and parsed successfully!")
 
-    # Extract structured columns from Reaction List PT compound field
-    df[['Reaction List PT', 'Duration', 'Outcome', 'Seriousness Criteria']] = df[
-        'Reaction List PT (Duration – Outcome - Seriousness Criteria)'
-    ].str.extract(r'^(.*?) \((.*?) – (.*?) - (.*?)\)$')
-
     # Data Preview
     with st.expander("🔍 Preview Raw Data"):
         st.dataframe(df.head(10))
@@ -34,7 +29,7 @@ if uploaded_file:
     # Signal Detection
     st.subheader("⚠️ Top Drug-Reaction Signals")
     df['Drug'] = df['Suspect/interacting Drug List (Drug Char - Indication PT - Action taken - [Duration - Dose - Route])'].str.extract(r'\[(.*?)\]')
-    df['Reaction'] = df['Reaction List PT']
+    df['Reaction'] = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].str.extract(r'([A-Za-z ]+)')
     signals = df.groupby(['Drug', 'Reaction']).size().reset_index(name="Count").sort_values("Count", ascending=False).head(10)
     st.dataframe(signals)
 
@@ -52,10 +47,12 @@ if uploaded_file:
 
     # Outcome & Seriousness Summary
     st.subheader("🧠 Outcome & Seriousness Summary")
+    outcome_series = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].dropna().str.extract(r'– (.*?) –')[0]
+    seriousness_series = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].dropna().str.extract(r'– .*? – (.*?)\)')[0]
 
-    outcome_counts = df['Outcome'].value_counts().reset_index()
+    outcome_counts = outcome_series.value_counts().reset_index()
     outcome_counts.columns = ["Outcome", "Count"]
-    seriousness_counts = df['Seriousness Criteria'].value_counts().reset_index()
+    seriousness_counts = seriousness_series.value_counts().reset_index()
     seriousness_counts.columns = ["Seriousness", "Count"]
 
     st.markdown("**Most Common Outcomes**")
@@ -69,6 +66,7 @@ if uploaded_file:
     most_drug = df['Drug'].mode()[0] if not df['Drug'].mode().empty else "N/A"
     most_reaction = df['Reaction'].mode()[0] if not df['Reaction'].mode().empty else "N/A"
     top_demo = demo.sort_values("Count", ascending=False).iloc[0]
+
     top_outcome = outcome_counts.iloc[0]["Outcome"] if not outcome_counts.empty else "N/A"
     top_seriousness = seriousness_counts.iloc[0]["Seriousness"] if not seriousness_counts.empty else "N/A"
 
