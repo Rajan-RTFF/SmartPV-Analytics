@@ -12,14 +12,30 @@ if uploaded_file:
     df = pd.read_excel(uploaded_file)
     st.success("✅ File uploaded and parsed successfully!")
 
-    # Extract structured columns from Reaction List PT compound field
-    df[['Reaction List PT', 'Duration', 'Outcome', 'Seriousness Criteria']] = df[
-        'Reaction List PT (Duration – Outcome - Seriousness Criteria)'
-    ].str.extract(r'^(.*?) \((.*?) – (.*?) - (.*?)\)$')
+    # Data Cleaning & Segregation
+    st.info("🔍 Parsing complex reaction details into structured fields...")
+
+    def parse_reaction_details(text):
+        try:
+            parts = text.split(" (")
+            reaction = parts[0].strip()
+            details = parts[1].strip(")")
+            segments = [seg.strip() for seg in details.split("–")]
+            if len(segments) == 3:
+                duration, outcome, seriousness = segments
+                return pd.Series([reaction, duration, outcome, seriousness])
+        except:
+            return pd.Series([None, None, None, None])
+        return pd.Series([None, None, None, None])
+
+    df[['Reaction', 'Duration', 'Outcome', 'Seriousness Criteria']] = df['Reaction List PT (Duration – Outcome - Seriousness Criteria)'].apply(parse_reaction_details)
+
+    # Drug Extraction
+    df['Drug'] = df['Suspect/interacting Drug List (Drug Char - Indication PT - Action taken - [Duration - Dose - Route])'].str.extract(r'\[(.*?)\]')
 
     # Data Preview
     with st.expander("🔍 Preview Raw Data"):
-        st.dataframe(df.head(10))
+        st.dataframe(df[['Drug', 'Reaction', 'Duration', 'Outcome', 'Seriousness Criteria']].head(10))
 
     # Demographic Summary
     st.subheader("👥 Demographic Summary")
@@ -33,8 +49,6 @@ if uploaded_file:
 
     # Signal Detection
     st.subheader("⚠️ Top Drug-Reaction Signals")
-    df['Drug'] = df['Suspect/interacting Drug List (Drug Char - Indication PT - Action taken - [Duration - Dose - Route])'].str.extract(r'\[(.*?)\]')
-    df['Reaction'] = df['Reaction List PT']
     signals = df.groupby(['Drug', 'Reaction']).size().reset_index(name="Count").sort_values("Count", ascending=False).head(10)
     st.dataframe(signals)
 
@@ -52,7 +66,6 @@ if uploaded_file:
 
     # Outcome & Seriousness Summary
     st.subheader("🧠 Outcome & Seriousness Summary")
-
     outcome_counts = df['Outcome'].value_counts().reset_index()
     outcome_counts.columns = ["Outcome", "Count"]
     seriousness_counts = df['Seriousness Criteria'].value_counts().reset_index()
@@ -69,6 +82,7 @@ if uploaded_file:
     most_drug = df['Drug'].mode()[0] if not df['Drug'].mode().empty else "N/A"
     most_reaction = df['Reaction'].mode()[0] if not df['Reaction'].mode().empty else "N/A"
     top_demo = demo.sort_values("Count", ascending=False).iloc[0]
+
     top_outcome = outcome_counts.iloc[0]["Outcome"] if not outcome_counts.empty else "N/A"
     top_seriousness = seriousness_counts.iloc[0]["Seriousness"] if not seriousness_counts.empty else "N/A"
 
