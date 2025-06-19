@@ -79,7 +79,8 @@ if uploaded_file:
     - **Most Common Outcome:** `{top_outcome}`
     - **Most Common Seriousness Criteria:** `{top_seriousness}`
     """)
-     # Disproportionality Analysis (Simplified PRR)
+
+    # Disproportionality Analysis (Simplified PRR)
      st.header("📌 Disproportionality Analysis PRR Approximation")
      total_reports = len(df)
      drug_event_counts = df.groupby(['Drug', 'Reaction']).size().reset_index(name='Count')
