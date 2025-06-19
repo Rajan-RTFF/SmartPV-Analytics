@@ -80,13 +80,13 @@ if uploaded_file:
     - **Most Common Seriousness Criteria:** `{top_seriousness}`
     """)
      # Disproportionality Analysis (Simplified PRR)
-st.header("📌 Disproportionality Analysis PRR Approximation")
-      total_reports = len(df)
-      drug_event_counts = df.groupby(['Drug', 'Reaction']).size().reset_index(name='Count')
-      drug_counts = df['Drug'].value_counts().reset_index()
-      drug_counts.columns = ['Drug', 'TotalDrugReports']
-      reaction_counts = df['Reaction'].value_counts().reset_index()
-      reaction_counts.columns = ['Reaction', 'TotalReactionReports']
+       st.header("📌 Disproportionality Analysis PRR Approximation")
+       total_reports = len(df)
+       drug_event_counts = df.groupby(['Drug', 'Reaction']).size().reset_index(name='Count')
+       drug_counts = df['Drug'].value_counts().reset_index()
+       drug_counts.columns = ['Drug', 'TotalDrugReports']
+       reaction_counts = df['Reaction'].value_counts().reset_index()
+       reaction_counts.columns = ['Reaction', 'TotalReactionReports']
 
      # Merge and compute PRR-like metric
        merged = pd.merge(drug_event_counts, drug_counts, on='Drug')
@@ -94,7 +94,7 @@ st.header("📌 Disproportionality Analysis PRR Approximation")
        merged['PRR_approx'] = (merged['Count'] / merged['TotalDrugReports']) / (merged['TotalReactionReports'] / total_reports)
        merged = merged.sort_values('PRR_approx', ascending=False).head(10)
 
-st.dataframe(merged[['Drug', 'Reaction', 'Count', 'PRR_approx']])
+     st.dataframe(merged[['Drug', 'Reaction', 'Count', 'PRR_approx']])
      # Drug-Reaction Mapping Table
        st.header("🧬 Drug-Reaction Network Mapping")
        network_table = df.groupby(['Drug', 'Reaction']).size().reset_index(name="Frequency")
